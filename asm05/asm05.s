@@ -26,9 +26,9 @@ _start:
     call itoa
 
     lea rsi, [result]
+    mov rdx, 21
     mov rax, 1
     mov rdi, 1
-    mov rdx, 21
     syscall
 
     xor rdi, rdi
