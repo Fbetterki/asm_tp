@@ -14,14 +14,17 @@ _start:
     syscall
 
     mov rdi, input
+    xor rcx, rcx
+
 verifier_input:
-    cmp byte [rdi], 0
+    mov al, byte [rdi + rcx]
+    cmp al, 0
     je dernier
-    cmp byte [rdi], 0x30
+    cmp al, 0x30
     jb bad_input
-    cmp byte [rdi], 0x39
+    cmp al, 0x39
     ja bad_input
-    inc rdi
+    inc rcx
     jmp verifier_input
 
 bad_input:
