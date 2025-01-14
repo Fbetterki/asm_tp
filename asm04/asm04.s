@@ -1,44 +1,32 @@
 global _start
 
-section .data
-
 section .bss
-    input resb 11
+input resb 3
 
 section .text
 _start:
+    ; Lire l'entrée
     mov eax, 0
     mov edi, 0
     mov rsi, input
-    mov edx, 11
+    mov edx, 3
     syscall
 
-    mov rdi, input
-    add rdi, 10
+    ; Convertir l'entrée en nombre
+    mov rax, 0
+    mov rbx, input
+    sub byte [rbx], '0'  ; Convertir ASCII en nombre
 
-dernier:
-    cmp byte [rdi], 0x30
-    jb verifier
-    cmp byte [rdi], 0x39
-    ja verifier
-    jmp resultat            
+    ; Vérifier si pair
+    xor rdx, rdx
+    mov rdi, 2
+    div rdi
+    test rdx, rdx
+    jne _error
 
-verifier:
-    dec rdi                       
-    jmp dernier
+    xor eax, eax
+    ret
 
-resultat:
-    movzx eax, byte [rdi]         
-    sub eax, '0'                  
-
-    and eax, 1                    
-    jnz impair                      
-
-    mov rax, 60
-    mov rdi, 0
-    syscall
-
-impair:
-    mov rax, 60
-    mov rdi, 1
-    syscall
+_error:
+    mov eax, 1
+    ret
