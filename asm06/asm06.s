@@ -1,67 +1,67 @@
-global _start
-
 section .data
-    message db 'Entrez un nombre: ', 0xA
-
+    user_input db "Enter a number: ", 10
+        
 section .bss
-    nombre resb 32
+    nombre resb 6
 
 section .text
+    global _start
 
 _start:
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, message
-    mov rdx, 17
-    syscall
+    mov eax, 1
+    mov edi, 1
+    mov esi, user_input
+    mov edx, 17
+    syscall 
 
-    mov rax, 0
-    mov rdi, 0
-    mov rsi, nombre
-    mov rdx, 32
-    syscall
+   mov eax, 0
+   mov edi, 0
+   mov esi, nombre
+   mov edx, 6
+   syscall
 
-    sub rax, 1
-    mov rcx, rax
-    lea rsi, [nombre]
+sub eax, 1
+mov ecx, eax
+lea esi, [nombre]
 
-    xor rdi, rdi
+ xor edi, edi
 
-convert_decimal:
-    xor rax, rax
-    movzx rax, byte [rsi]
-    sub rax, '0'
-    cmp rax, 10
-    jae est_premier
-    imul rdi, rdi, 10
-    add rdi, rax
-    inc rsi
-    loop convert_decimal
 
-est_premier:
-    cmp rdi, 2
-    jb non_premier
-    je premier
-    mov rcx, rdi
-    shr rcx, 1
-    mov rsi, 2
+ convert_loop:
+   xor eax, eax
+   movzx eax, byte [esi]
+   sub eax, '0'
+   cmp eax, 10
+   jae done
+   imul edi, edi, 10
+   add  edi, eax
+   inc esi
+    loop convert_loop
 
-test_prime:
-    mov rax, rdi
-    xor rdx, rdx
-    div rsi
-    cmp rdx, 0
-    je non_premier
-    inc rsi
-    cmp rsi, rcx
-    jbe test_prime
+done:
+  cmp edi, 2
+  jb not_prime
+  je is_prime
+  mov ecx, edi
+  shr ecx, 1
+  mov esi, 2
 
-premier:
-    mov rax, 60 
-    mov rdi, 0
-    syscall
+check_divisibility:
+   mov eax, edi
+    xor edx, edx
+    div esi
+    cmp edx, 0
+    je not_prime
+    inc esi
+    cmp esi, ecx
+    jbe check_divisibility
 
-non_premier:
-    mov rax, 60
-    mov rdi, 1
-    syscall
+is_prime:
+ mov eax, 60
+ mov edi, 0
+ syscall
+
+ not_prime:
+mov eax, 60
+mov edi, 1
+syscall   
