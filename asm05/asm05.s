@@ -1,90 +1,120 @@
-section .bss
-    num1 resq 1
-    num2 resq 1
-    result resb 21
+section .data
+    userMessage db 'Result: ', 0xA
+    userMessageLen equ $ - userMessage
+    resultBuffer times 20 db 0
 
 section .text
     global _start
 
 _start:
-    mov rdi, [rsp]
-    cmp rdi, 3
-    jl insufficient_args
+    ; Vérifier si deux arguments sont fournis
+    mov rdi, [rsp + 16]  ; argv[1]
+    test rdi, rdi
+    jz exitFailure
+    mov rsi, [rsp + 24]  ; argv[2]
+    test rsi, rsi
+    jz exitFailure
 
-    mov rsi, [rsp+16]
-    call atoi
-    mov [num1], rax
+    ; Convertir le premier argument en entier
+    call convertToInt
+    mov r12, rax         ; Stocker le résultat
+    mov rdi, rsi         ; Charger le deuxième argument dans rdi
 
-    mov rsi, [rsp+24]
-    call atoi
-    mov [num2], rax
+    ; Convertir le deuxième argument en entier
+    call convertToInt
+    add rax, r12         ; Ajouter les deux entiers
 
-    mov rax, [num1]
-    add rax, [num2]
+    ; Convertir le résultat en chaîne de caractères
+    mov rdi, rax
+    mov rsi, resultBuffer
+    call intToString
 
-    mov rdi, result
-    call itoa
-
-    lea rsi, [result]
-    mov rdx, 21
+    ; Afficher "Result: "
+    mov rdi, 1
     mov rax, 1
+    mov rsi, userMessage
+    mov rdx, userMessageLen
+    syscall
+
+    ; Afficher le résultat
     mov rdi, 1
+    mov rax, 1
+    mov rsi, resultBuffer
+    mov rdx, 20
     syscall
 
-    xor rdi, rdi
-    mov rax, 60
+    ; Sortir avec le code de statut 0
+    mov eax, 60
+    xor edi, edi
     syscall
 
-insufficient_args:
-    mov rdi, 1
-    mov rax, 60
+exitFailure:
+    ; Sortir avec le code de statut 1
+    mov eax, 60
+    mov edi, 1
     syscall
 
-atoi:
-    xor rax, rax
+convertToInt:
     xor rbx, rbx
-    mov rcx, rsi
-    cmp byte [rcx], '-'
-    jne .loop
-    inc rsi
-    mov bl, 1
-.loop:
-    movzx rcx, byte [rsi]
-    test rcx, rcx
-    jz .done
-    sub rcx, '0'
-    imul rax, rax, 10
-    add rax, rcx
-    inc rsi
-    jmp .loop
+    xor rcx, rcx
+    mov rdx, 0          ; rdx sera utilisé pour indiquer si le nombre est négatif
+    mov al, [rdi]
+    cmp al, '-'         ; Vérifier si le nombre est négatif
+    jne .nextChar
+    inc rdi             ; Passer le signe moins
+    mov rdx, 1          ; Indiquer que le nombre est négatif
+
+.nextChar:
+    movzx rax, byte [rdi + rcx]
+    test  rax, rax
+    jz    .done
+    sub   rax, '0'
+    imul  rbx, rbx, 10
+    add   rbx, rax
+    inc   rcx
+    jmp   .nextChar
+
 .done:
-    test bl, bl
-    jz .positive
-    neg rax
+    cmp rdx, 0
+    je .positive
+    neg rbx             ; Si le nombre est négatif, inverser le signe
 .positive:
+    mov rax, rbx
     ret
 
-itoa:
-    mov rbx, 10
-    xor rcx, rcx
-    test rax, rax
-    jns .positive_number
-    neg rax
-    mov cl, '-'
-.positive_number:
-    lea rdi, [rdi + 20]
-    mov byte [rdi], 0
-.convert:
-    dec rdi
-    xor rdx, rdx
-    div rbx
-    add dl, '0'
-    mov [rdi], dl
-    test rax, rax
-    jnz .convert
-    test rcx, rcx
-    jz .done
-    dec rdi
-    mov [rdi], cl
+intToString:
+    mov     rcx, 10
+    mov     rdi, rsi
+    add     rdi, 20
+    mov     byte [rdi], 0
+    mov     rbx, rdi    ; Sauvegarder la fin de la chaîne
+
+    ; Gérer le cas où rax est 0
+    test    rax, rax
+    jnz     .not_zero
+    dec     rdi
+    mov     byte [rdi], '0'
+    ret
+
+.not_zero:
+    test    rax, rax
+    jns     .positiveNumber
+    neg     rax         ; Si le nombre est négatif, inverser le signe
+
+.positiveNumber:
+.nextDigit:
+    dec     rdi
+    xor     rdx, rdx
+    div     rcx
+    add     dl, '0'
+    mov     [rdi], dl
+    test    rax, rax
+    jnz     .nextDigit
+
+    cmp     byte [rsi], '-' ; Si le nombre était négatif
+    jns     .done
+    dec     rdi
+    mov     byte [rdi], '-'
+
 .done:
     ret
