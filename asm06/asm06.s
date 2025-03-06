@@ -1,74 +1,149 @@
-global _start
-
 section .data
-    input_msg db 'Entrez un nombre: ', 0xA
-section .bss
-    input_buffer resb 32
+    buffer db 20 dup(0)
 
 section .text
+    global _start
 
 _start:
+
+    pop rcx         
+    cmp rcx, 3      
+    jne exit_error
+
+    pop rcx
+    
+    
+    pop rcx
+    mov rdi, rcx
+    call atoi       
+    mov r12, rax    
+    
+   
+    pop rcx
+    mov rdi, rcx
+    call atoi       
+    
+    
+    add rax, r12
+    
+
+    mov rdi, rax
+    mov rsi, buffer
+    call itoa
+    
+
+    mov rdi, buffer
+    call strlen
+    
+
+    mov rdx, rax    
+    mov rax, 1      
+    mov rdi, 1      
+    mov rsi, buffer
+    syscall
+    
+    mov [buffer], byte 0xA
     mov rax, 1
     mov rdi, 1
-    mov rsi, input_msg
-    mov rdx, 17
+    mov rsi, buffer
+    mov rdx, 1
     syscall
+    
+    jmp exit_success
 
-    mov rax, 0
-    mov rdi, 0
-    mov rsi, input_buffer
-    mov rdx, 32
-    syscall
 
-    cmp byte [rsi], 'A'
-    je handle_letter_a
+atoi:
+    push rbx
+    mov rsi, rdi        
+    xor rax, rax        
+    mov rbx, 1          
 
-    sub rax, 1
-    mov rcx, rax
-    lea rsi, [input_buffer]
+    
+    cmp byte [rsi], '-'
+    jne .process_digits
+    inc rsi             
+    neg rbx             
 
-    xor rdi, rdi
-
-convert_to_decimal:
-    xor rax, rax
-    movzx rax, byte [rsi]
-    sub rax, '0'
-    cmp rax, 10
-    jae check_prime
-    imul rdi, rdi, 10
-    add rdi, rax
+.process_digits:
+    movzx rcx, byte [rsi]
+    test rcx, rcx
+    jz .done
+    
+    cmp rcx, '0'
+    jb .done
+    cmp rcx, '9'
+    ja .done
+    
+    sub rcx, '0'
+    imul rax, 10
+    add rax, rcx
+    
     inc rsi
-    loop convert_to_decimal
+    jmp .process_digits
 
-check_prime:
-    cmp rdi, 2
-    jb not_prime
-    je is_prime
-    mov rcx, rdi
-    shr rcx, 1
-    mov rsi, 2
+.done:
+    imul rax, rbx       
+    pop rbx
+    ret
 
-test_divisors:
+
+itoa:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    
+    
+    test rdi, rdi
+    jns .positive
+    neg rdi
+    mov byte [rsi], '-'
+    inc rsi
+    
+.positive:
     mov rax, rdi
+    mov rbx, 10
+    mov rcx, 0          
+    
+.divide_loop:
     xor rdx, rdx
-    div rsi
-    cmp rdx, 0
-    je not_prime
+    div rbx
+    push rdx            
+    inc rcx
+    test rax, rax
+    jnz .divide_loop
+    
+.build_string:
+    pop rax
+    add al, '0'
+    mov [rsi], al
     inc rsi
-    cmp rsi, rcx
-    jbe test_divisors
+    dec rcx
+    jnz .build_string
+    
+    mov byte [rsi], 0   
+    
+    pop rbx
+    mov rsp, rbp
+    pop rbp
+    ret
 
-is_prime:
-    mov rax, 60
-    mov rdi, 0
+
+strlen:
+    xor rax, rax
+.loop:
+    cmp byte [rdi + rax], 0
+    je .done
+    inc rax
+    jmp .loop
+.done:
+    ret
+
+exit_success:
+    mov rax, 60         
+    xor rdi, rdi       
     syscall
 
-not_prime:
-    mov rax, 60
-    mov rdi, 1
-    syscall
-
-handle_letter_a:
-    mov rax, 60
-    mov rdi, 2
+exit_error:
+    mov rax, 60         
+    mov rdi, 1          
     syscall
